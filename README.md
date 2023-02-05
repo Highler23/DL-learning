@@ -1,2 +1,2 @@
-# python-learning
-用于学习python(深度学习方向)
+# DL-learning
+用于`Deep-Learning` 方面的学习
