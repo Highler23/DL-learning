@@ -66,22 +66,24 @@ model = Model()
 model=torch.load('tatianic.pth')
 predict=model(X)
 y=predict.detach().numpy()
-list1=[]
+
+list1=[]  # 空列表
 for i in y:
     if i > 0.5:
         i=1
-        list1.append(i)
+        list1.append(i)  # 存入列表
     else:
         i=0
         list1.append(i)
 
 list2=[]
-for i in range(892,1310):
+for i in range(892,1310):  # python中()是左闭右开的
     list2.append(i)
+
 list=[list1,list2]
 names = ['PassengerId','Survived']
-test = pd.DataFrame(zip(list2,list1),columns = names)
-test.to_csv('predict1.csv',index=False)
+test = pd.DataFrame(zip(list2,list1),columns = names)  # 拼接
+test.to_csv('predict1.csv',index=False)  # 保存csv文件
 
 
 
