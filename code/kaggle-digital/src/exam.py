@@ -2,7 +2,7 @@
 # 数据预处理
 import pandas as pd
 
-train_data = pd.read_csv("./data/train.csv")  # 读取训练数据集数据 相对路径
+train_data = pd.read_csv("../data/train.csv")  # 读取训练数据集数据 相对路径
 # print(train_data.head(10))  # 查看前十行数据
 
 # dfresult= pd.DataFrame()  # 赋值一个空的表格，dataframe，用于保存数据
