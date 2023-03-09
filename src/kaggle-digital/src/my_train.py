@@ -76,7 +76,6 @@ for epoch in range(EOPCH):
         print('epoch %d'%(epoch+1),'start %d'%step)
     print('----------训练结束----------')
 
-# 保存模型
 print('开始保存模型......')
 torch.save(cnn,'../result/model_weights.pth')
 print('模型已保存至: {}'.format('../result/model_weights.pth'))
