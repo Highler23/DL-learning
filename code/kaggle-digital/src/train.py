@@ -1,98 +1,84 @@
 import torch
+import torch.nn.functional as F
 from torch import nn
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
+from torch.utils.data import Dataset, DataLoader,TensorDataset
+from torch.autograd import Variable
 
 import pandas as pd
+import numpy as np
 
-train_df = pd.read_csv("../data/train.csv")
-test_df = pd.read_csv("../data/test.csv")
+# 参数设置
+EOPCH = 1        # 训练轮数
+BATCH_SIZE = 64  # 每批次数据数量
+LR = 0.01        # 学习速率
 
-class MyDataset(Dataset):
-    def __init__(self,train_data,transform):
-        self.train_data = train_df
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.train_data)
-
-    def __getitem__(self, idx):
-        label = self.train_data[idx, 0]  # 第一行为数据类别(标签)
-        image = torch.FloatTensor(self.train_data[idx, 1:]).view(28, 28).unsqueeze(0)  # 类型转换, 将list ,numpy转化为tensor
-        image = self.transform(image)
-        return image, label
-
-# dataloader加载数据集
-EPOCH = 30  # 训练轮数
-BATCH_SIZE = 64
-LR = 0.002  # 学习率
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=(0.5,),std=(0,5,))
-])
-
-train_dataset = MyDataset(train_data=train_df,transform=transform)
-train_dataloader = DataLoader(train_dataset,batch_size=BATCH_SIZE,shuffle=True)
-
-
-class Lenet5(nn.Module):
+# 模型构建
+class CNN(nn.Module):
     def __init__(self):
-        super(Lenet5, self).__init__()
-        self.conv1 = nn.Sequential(  # (1,32,32)
-            nn.Conv2d(
-                in_channels=1,  # 输入通道数，若图片为RGB则为3通道
-                out_channels=6,  # 输出通道数，即多少个卷积核一起卷积
-                kernel_size=5,  # 卷积核大小
-                stride=1,  # 卷积核移动步长
-                padding=0,  # 边缘增加的像素，使得得到的图片长宽没有变化
-            ),  # (6,28,28)
-            nn.MaxPool2d(2,stride=1,padding=0) #(6,14,14)
+        super(CNN, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(  # (1,28,28)
+                in_channels=1,
+                out_channels=16,
+                kernel_size=5,
+                stride=1,
+                padding=2
+            ),      # --> (16,28,28)
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),    # -->(16,14,14)
         )
-        self.conv2 = nn.Sequential(  # (6,14,14)
-            nn.Conv2d(
-                in_channels=6,  # 输入通道数
-                out_channels=16,  # 输出通道数，即多少个卷积核一起卷积
-                kernel_size=5,  # 卷积核大小
-                stride=1,  # 卷积核移动步长
-                padding=0,  # 边缘增加的像素，使得得到的图片长宽没有变化
-            ),  # (16,10,10)
-            nn.MaxPool2d(2,stride=1,padding=0) #(16,5,5)
+        self.conv2 = nn.Sequential(     # --> (16,14,14)
+            nn.Conv2d(16,32,5,1,2), # 这里用了两个过滤器，将将16层变成了32层
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2) # --> (32,7,7)
         )
-        self.linear = nn.Sequential(
-            nn.Linear(16*5*5,120),
-            nn.Linear(120,84),
-            nn.Linear(84,10)
-        )
+        self.out = nn.Linear(32*7*7,10) # 将三维的数据展为2维的数据
 
-    def forward(self,input):
-        input = self.conv1(input)
-        input = self.conv2(input)
-        output = self.linear(input)
+    def forward(self,x):
+        x = self.conv1(x)
+        x = self.conv2(x)       # (batch,32,7,7)
+        x = x.view(x.size(0),-1)    # (batch,32,7,7)
+        # output = F.softmax(self.out(x))
+        output = self.out(x)
         return output
 
-lenet5 = Lenet5()
-loss_fn = nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(lenet5.parameters(),lr=LR)
+cnn = CNN()  # 实例化网络模型
+optimzer = torch.optim.Adam(cnn.parameters(),lr=LR)
+loss_func = nn.CrossEntropyLoss()
 
-total_train_step = 0
-total_test_step = 0
+# 加载数据集
+train = pd.read_csv('../data/train.csv')
+train_labels = torch.from_numpy(np.array(train.label[:]))  # 将数组转换成张量，且二者共享内存，对张量进行修改，原始数组也会相应发生改变
+# print(train_labels)  # tensor([1, 0, 1,  ..., 7, 6, 9])
+train_data = torch.Tensor(np.array(train.iloc[:,1:]).reshape((-1,1,28,28)))/255  # iloc[row,col] reshape((r,c,w,h))
+train_data = TensorDataset(train_data,train_labels)  # TensorDataset(x_train,y_train)  传入数据为tensor
 
-for epoch in range(EPOCH):
-    print("---------------第 {} 轮训练开始---------------".format(epoch+1))
-    for data in train_dataloader:
-        imgs,targets = data
-        outputs = lenet5(imgs)
-        loss = loss_fn(outputs,targets)
+train_loader = DataLoader(
+    dataset=train_data,
+    batch_size=BATCH_SIZE,
+    shuffle=True
+)
 
-        optimizer.zero_grad()
+print('----------数据加载完成----------')
+
+for epoch in range(EOPCH):
+    # print("-" * 25)  # 分界线
+    for step,(x,y) in enumerate(train_loader):
+        # tensor不能反向传播，variable可以反向传播;variable存放会变化值的地理位置，里面的值会不停变化
+        b_x = Variable(x)  # 将tensor转换成variable
+        b_y = Variable(y)
+        output = cnn(b_x)  # 输出
+        loss = loss_func(output,b_y)
+        # update W
+        optimzer.zero_grad()
         loss.backward()
-        optimizer.step()
+        optimzer.step()
+        print('epoch %d'%(epoch+1),'start %d'%step)
+    print('----------训练结束----------')
 
-        total_train_step = total_train_step + 1
-        print("训练次数：{},Loss = {}".format(total_train_step,loss.item()))
-
-torch.save(lenet5.state_dict(),'model_weights.pth')
-
+# 保存模型
+print('开始保存模型......')
+torch.save(cnn,'../result/model_weights.pth')
+print('模型已保存至: {}'.format('../result/model_weights.pth'))
+print('保存模型成功')
+print('即将退出程序......')

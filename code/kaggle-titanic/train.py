@@ -1,5 +1,5 @@
 '''
-    环境：windows10 + anaconda4.13.0 + pytorch cuda113 + python3.7
+    鐜锛歸indows10 + anaconda4.13.0 + pytorch cuda113 + python3.7
 '''
 import torch
 from torch.utils.data import Dataset
@@ -7,51 +7,51 @@ from torch.utils.data import DataLoader
 import pandas as pd
 import numpy as np
 
-# 准备数据集
+# 鍑嗗鏁版嵁闆�
 class TitanicDataset(Dataset):
 
     def __init__(self, filepath):
-        xy = pd.read_csv(filepath)  # 读入csv文件
-        self.len = xy.shape[0]  # xy.shape()可以得到xy的行列数;shape[0]表示行数，shape[1]表示列数
-        # 选取相关的数据特征
+        xy = pd.read_csv(filepath)  # 璇诲叆csv鏂囦欢
+        self.len = xy.shape[0]  # xy.shape()鍙互寰楀埌xy鐨勮鍒楁暟;shape[0]琛ㄧず琛屾暟锛宻hape[1]琛ㄧず鍒楁暟
+        # 閫夊彇鐩稿叧鐨勬暟鎹壒寰�
         feature = ["Pclass", "Sex", "SibSp", "Parch", "Fare"]
-        # 特征提取
-        self.x_data = torch.from_numpy(np.array(pd.get_dummies(xy[feature])))  # np.array()将数据转换成矩阵，方便进行接下来的计算
+        # 鐗瑰緛鎻愬彇
+        self.x_data = torch.from_numpy(np.array(pd.get_dummies(xy[feature])))  # np.array()灏嗘暟鎹浆鎹㈡垚鐭╅樀锛屾柟渚胯繘琛屾帴涓嬫潵鐨勮绠�
         self.y_data = torch.from_numpy(np.array(xy["Survived"]))
 
-    # getitem函数，可以使用索引拿到数据
+    # getitem鍑芥暟锛屽彲浠ヤ娇鐢ㄧ储寮曟嬁鍒版暟鎹�
     def __getitem__(self, index):
         return self.x_data[index], self.y_data[index]
 
-    # 返回数据的条数/长度
+    # 杩斿洖鏁版嵁鐨勬潯鏁�/闀垮害
     def __len__(self):
         return self.len
 
-dataset = TitanicDataset('data/train.csv')  # 实例化自定义类，并传入数据地址
+dataset = TitanicDataset('data/train.csv')  # 瀹炰緥鍖栬嚜瀹氫箟绫伙紝骞朵紶鍏ユ暟鎹湴鍧€
 train_loader = DataLoader(dataset=dataset, batch_size=1, shuffle=True, num_workers=0)
 
-# 定义模型
+# 瀹氫箟妯″瀷
 class Model(torch.nn.Module):
     def __init__(self):
         super(Model, self).__init__()
-        # 要先对选择的特征进行独热表示计算出维度，而后再选择神经网络开始的维度
+        # 瑕佸厛瀵归€夋嫨鐨勭壒寰佽繘琛岀嫭鐑〃绀鸿绠楀嚭缁村害锛岃€屽悗鍐嶉€夋嫨绁炵粡缃戠粶寮€濮嬬殑缁村害
         self.linear1 = torch.nn.Linear(6, 3)
         self.linear2 = torch.nn.Linear(3, 1)
         self.sigmoid = torch.nn.Sigmoid()
 
-    # 前馈函数
+    # 鍓嶉鍑芥暟
     def forward(self, x):
         x = self.sigmoid(self.linear1(x))
         x = self.sigmoid(self.linear2(x))
         return x
 
-    # 测试函数
+    # 娴嬭瘯鍑芥暟
     def test(self, x):
         with torch.no_grad():
             x = self.sigmoid(self.linear1(x))
             x = self.sigmoid(self.linear2(x))
             y = []
-            # 根据二分法原理，划分y的值
+            # 鏍规嵁浜屽垎娉曞師鐞嗭紝鍒掑垎y鐨勫€�
             for i in x:
                 if i > 0.5:
                     y.append(1)
@@ -59,22 +59,22 @@ class Model(torch.nn.Module):
                     y.append(0)
             return y
 
-# 实例化模型
+# 瀹炰緥鍖栨ā鍨�
 model = Model()
 
-# 定义损失函数
+# 瀹氫箟鎹熷け鍑芥暟
 criterion = torch.nn.BCELoss(reduction='mean')
 
-# 定义优化器
+# 瀹氫箟浼樺寲鍣�
 optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
 
 if __name__ == '__main__':
-    # 采用多层嵌套循环
+    # 閲囩敤澶氬眰宓屽寰幆
     for epoch in range(100):
-        # data从train_loader中取出数据（取出的是一个元组数据）：（x，y）
-        # enumerate可以获得当前是第几次迭代，内部迭代每一次跑一个Mini-Batch
+        # data浠巘rain_loader涓彇鍑烘暟鎹紙鍙栧嚭鐨勬槸涓€涓厓缁勬暟鎹級锛氾紙x锛寉锛�
+        # enumerate鍙互鑾峰緱褰撳墠鏄鍑犳杩唬锛屽唴閮ㄨ凯浠ｆ瘡涓€娆¤窇涓€涓狹ini-Batch
         for i, data in enumerate(train_loader, 0):
-            # inputs获取到data中的x的值，labels获取到data中的y值
+            # inputs鑾峰彇鍒癲ata涓殑x鐨勫€硷紝labels鑾峰彇鍒癲ata涓殑y鍊�
             x, y = data
             x = x.float()
             y = y.float()
@@ -86,15 +86,15 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
 
-# 测试
+# 娴嬭瘯
 test_data = pd.read_csv('data/test.csv')
 feature = ["Pclass", "Sex", "SibSp", "Parch", "Fare"]
 test = torch.from_numpy(np.array(pd.get_dummies(test_data[feature])))
 y = model.test(test.float())
 
-# 输出预测结果
+# 杈撳嚭棰勬祴缁撴灉
 output = pd.DataFrame({'PassengerId': test_data.PassengerId, 'Survived': y})
 output.to_csv('exp/csv/my_predict.csv', index=False)
 
-#保存训练好的模型
+#淇濆瓨璁粌濂界殑妯″瀷
 torch.save(model.state_dict(), "exp/pth/result.pt")
