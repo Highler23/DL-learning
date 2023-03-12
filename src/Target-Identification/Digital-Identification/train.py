@@ -60,16 +60,18 @@ loss_fn = torch.nn.CrossEntropyLoss()  # 对于简单的多分类任务，我们
 optimizer = torch.optim.Adam(net.parameters(),lr=learning_rate)
 
 # 模型训练
+print("using device: {}".format(device))  # 查看当前使用设备
 history = {'Test Loss': [], 'Test Accuracy': []}  # 存储训练过程  TODO:这里为啥可以这么写
 for epoch in range(1, EPOCH + 1):
     processBar = tqdm(train_loader, unit='step')
     net.train(True)
-    for step, (trainImgs, labels) in enumerate(processBar):
+    for step, (trainImgs, labels) in enumerate(processBar):  # TODO:这里的step是哪里的？
         # 这一句的enumerate(processBar)给(trainImgs, labels)返回了什么？它给step返回了索引吗，比如0,1,2...?
         trainImgs = trainImgs.to(device)
         labels = labels.to(device)
+        # 简便写法：trainImgs,labels = trainImgs.to(device),labels.to(device)
 
-        net.zero_grad()  # 梯度清零
+        net.zero_grad()  # 梯度清零  # TODO:这种清零方式和使用optimizer.step()优化器清零方式有区别吗？
         outputs = net(trainImgs)  # 前向传播
         loss = loss_fn(outputs, labels)  # 计算损失值
         predictions = torch.argmax(outputs, dim=1)  # TODO: 不是很懂这个函数argmax，这里的意思是返回预测结果中最大概率的元素所在列吗？
@@ -107,6 +109,7 @@ torch.save(net,'./result/model.pth')  # 注意这里不能自动创建目录，�
 #       2.一般是在训练代码中将使用验证集吗？
 #       3.既然已经在训练代码中更新了梯度，并进行了优化，为什么还要写验证代码？为什么要多次计算准确律等参数？
 #       4.标准的模型训练，测试代码怎么写？一些细节比如：超参数命名规则、变量的命名规则......
-#       5.模块化编程在深度学习中有必要吗？
+#       5.需要分别定义训练函数和验证函数吗？比如这一篇：https://blog.csdn.net/qq_45550375/article/details/126446155
+#       6.模块化编程在深度学习中有必要吗？
 #
 #
